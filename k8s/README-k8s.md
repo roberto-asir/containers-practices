@@ -21,6 +21,7 @@ Sección relacionada con Kubernetes y sus manifiestos de la práctica final del 
     - [Ingress](#ingress)
 
 
+
 ## Objetivos
 
 En esta sección se cubren los siguientes puntos de la práctica relacionados con manifiestos de Kubernetes: 7, 9-17 y 19.
@@ -113,9 +114,9 @@ Para ejecutar el repo completamente en un cluster limpio y se debe ejecutar los 
 
 ## Comprobar el despliegue
 Para comprobar el despliegue en caso de que se configure el ingress se puede obtener el enlace de acceso con este comando:
-Se pueden obtener las URLs (con y sin https) con este comando:
 `INGRESS=$(kubectl get ingress -n evenodds-ns | grep evenodds-ingress | awk '{print $3}') && echo http://$INGRESS && echo https://$INGRESS`
-![Captura desde 2022-10-02 12-18-12](https://user-images.githubusercontent.com/2046110/193449195-b87229a5-9472-43f1-9668-ee32ba7c8958.png)
+![Captura desde 2022-10-02 12-14-30](https://user-images.githubusercontent.com/2046110/193449247-ba99487a-7449-431a-be3c-bc3bbbf09e44.png)
+
 
 En caso de no usar ingress se puede acceder con este comando:
 Se pueden obtener las URLs (con y sin https) con este comando:
@@ -255,6 +256,11 @@ Con este se obtiene la contraseña de aceso al panel:
 
 Este comando genera la URL del panel:
 `echo https://$(kubectl get services -n evenodds-ns | grep eck-deploy-kb-http | awk '{print $4}'):5601`
+![Captura desde 2022-09-28 12-13-41](https://user-images.githubusercontent.com/2046110/193449326-43527426-5934-4235-9f44-5df4ec953e0d.png)
+
+![Captura desde 2022-09-27 17-32-15](https://user-images.githubusercontent.com/2046110/193449316-0aa886b7-f04e-4602-8db3-71bb0d944596.png)
+
+
 
 
 ### Ingress:
