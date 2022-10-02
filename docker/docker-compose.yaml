@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    volumes:
+      # - "./init_db.sh:/docker-entrypoint-initdb.d/init_db.sh"
+      # - "./init_db.sql:/init_db.sql"
+      - "./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql"
+      - "datakeepcodingpractica:/var/lib/postgresql/data"
+      
+    env_file:
+      - .env
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: ${MAX_LOGS_SIZE}
+        max-file: ${MAX_LOGS_FILES}
+
+  web:
+    build: .
+    ports:
+      - "${EXPOSED_PORT}:${APP_PORT}"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: ${MAX_LOGS_SIZE}
+        max-file: ${MAX_LOGS_FILES}
+
+
+volumes:
+  datakeepcodingpractica:
