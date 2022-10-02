@@ -1,0 +1,16 @@
+{{ if .Values.autoscale }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "evenodds.fullname" . }}-hpa
+  namespace: {{ .Values.namespace }}
+
+spec:
+  maxReplicas: {{ .Values.autoscale.maxReplicas | default 5}}
+  minReplicas: {{ .Values.autoscale.minReplicas | default 1}}
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: {{ include "evenodds.fullname" . }}-app
+  targetCPUUtilizationPercentage: {{ .Values.autoscale.targetCPUUtilizationPercentage | default 70 }}
+{{ end }}

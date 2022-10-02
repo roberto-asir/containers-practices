@@ -1,0 +1,95 @@
+apiVersion: apps/v1 # Version de la API (va cambiando)
+kind: Deployment  # TIPO: Deployment
+metadata: # Metadatos del Deployment
+  name: {{ include "evenodds.fullname" . }}-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "evenodds.labels" . | nindent 4 }}
+spec: # Specificacion del DEPLOYMENT
+  selector:
+    matchLabels:
+      {{- include "evenodds.selectorLabels" . | nindent 6 }}
+      app: evenodds-app
+  replicas: 2 # indica al controlador que ejecute 2 pods
+  template:
+    metadata: # Metadatos del POD    
+      {{- with .Values.appDeployment.appPodAnnotations }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      labels:
+        {{- include "evenodds.selectorLabels" . | nindent 8 }}
+        app: evenodds-app
+    spec: # Especificación del POD
+      {{- if .Values.appDeployment.appPodAffinity }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "evenodds.selectorLabels" . | nindent 6 }}
+                    app: evenodds-app
+                namespaces:
+                  - {{ .Values.namespace }}
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+      {{- end }}
+      initContainers:
+      - name: wait-for-ddbb
+        image: alpine
+        args:
+        - /bin/sh
+        - -c
+        - set -x;
+          RESP=KO;
+          HOST=${{ .Release.Name | upper }}_{{ .Chart.Name | upper }}_APP_DDBB_CONNECT_SERVICE_HOST;
+          while [[ $RESP != "OK" ]]; do 
+            if nc -zv -w 5 $HOST 5432 2>&1 | grep open; then RESP=OK; else echo Timeout connection. Trying again; fi;
+          done
+      containers: # Declaración de los contenedores del POD
+      containers: # Declaración de los contenedores del POD
+      - name: evenodds-container
+        resources:
+          requests:
+            memory: {{ .Values.appDeployment.requestsMemory }}
+            cpu: {{ .Values.appDeployment.requestsCpu }}
+          limits:
+            memory: {{ .Values.appDeployment.limitsMemory }}
+            cpu: {{ .Values.appDeployment.limitsCpu }}
+        image: robertoasir/even-odds:{{ .Values.appDeployment.imageVersion }}
+        ports:
+        - containerPort: 9000
+        env:
+          - name: APP_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "evenodds.fullname" . }}-app-cfgmp
+                key: APP_PORT
+          - name: MAX_LOGS_SIZE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "evenodds.fullname" . }}-app-cfgmp
+                key: MAX_LOGS_SIZE
+          - name: MAX_LOGS_FILES
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "evenodds.fullname" . }}-app-cfgmp
+                key: MAX_LOGS_FILES
+          - name: POSTGRES_HOST
+            #value: $(EVENODDS_APP_DDBB_CONNECT_SERVICE_HOST) --> XXXX_EVENODDS_APP_DDBB_CONNECT_SERVICE_HOST=10.8.9.243
+            value: $({{ .Release.Name | upper }}_{{ .Chart.Name | upper }}_APP_DDBB_CONNECT_SERVICE_HOST)
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "evenodds.fullname" . }}-db-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "evenodds.fullname" . }}-db-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "evenodds.fullname" . }}-db-secret
+                key: POSTGRES_DB

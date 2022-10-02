@@ -1,0 +1,42 @@
+{{ if .Values.ingress }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "evenodds.fullname" . }}-ingress
+  namespace: {{ .Values.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    {{- if .Values.letsEncrypt }}
+    {{- if .Values.letsEncrypt.env }}
+    {{- if eq .Values.letsEncrypt.env "prod" }}
+    cert-manager.io/cluster-issuer: {{ include "evenodds.fullname" . }}-prod.ssl
+    {{- else }}
+    cert-manager.io/cluster-issuer: {{ include "evenodds.fullname" . }}-staging.ssl
+    {{- end }}
+    {{- end }}
+    {{- end }}
+spec:
+  {{- if .Values.letsEncrypt }}
+  tls:
+    {{- if .Values.ingress.hosts }}
+    - hosts:
+      {{- range .Values.ingress.hosts }}
+      - {{ . }}
+      {{- end }}
+      secretName: evenodds-ingress-ssl-cert
+    {{- end }}
+  {{- end  }}
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: '/'
+            backend:
+              service:
+                name: {{ include "evenodds.fullname" . }}-lb
+                port:
+                  number: {{ .Values.ingress.port }}
+      {{- if .Values.ingress.hosts }}
+      host: {{ first .Values.ingress.hosts }}
+      {{- end }}
+{{ end }}

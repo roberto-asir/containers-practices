@@ -1,0 +1,31 @@
+{{ if .Values.letsEncrypt }}
+{{ if .Values.letsEncrypt.installCertManager }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  {{- if eq .Values.letsEncrypt.env "prod" }}
+  name: {{ include "evenodds.fullname" . }}-prod.ssl
+  {{- else }}
+  name: {{ include "evenodds.fullname" . }}-staging.ssl
+  {{- end }}
+spec:
+  acme:
+    # You must replace this email address with your own.
+    # Let's Encrypt will use this to contact you about expiring
+    # certificates, and issues related to your account.
+    email: roberto.asir@gmail.com
+    {{- if eq .Values.letsEncrypt.env "prod" }}
+    server: https://acme-v02.api.letsencrypt.org/directory
+    {{- else }}
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    {{- end }}
+    privateKeySecretRef:
+      # Secret resource that will be used to store the account's private key.
+      name: example-prod-issuer-account-key
+    # Add a single challenge solver, HTTP01 using nginx
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+{{- end }}
+{{- end }}

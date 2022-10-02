@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "evenodds.fullname" . }}-sfs
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "evenodds.selectorLabels" . | nindent 6 }}
+  serviceName: "evenodds-headless" # Tiene que hacer match con el headless service name
+  replicas: {{ .Values.ddbbDeployment.replicas | default 1 }} # 1 by default
+  template:
+    metadata:
+      labels:
+        {{- include "evenodds.selectorLabels" . | nindent 8 }} 
+        app: evenodds-stateful
+      annotations:
+        {{- with .Values.ddbbDeployment.elasticLogs }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      affinity:
+        {{- with .Values.ddbbDeployment.podAffinity }}
+          {{- toYaml . | nindent 8}}
+        {{- end }}
+      {{- with .Values.ddbbDeployment.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . | int }}
+      {{- end }}
+      containers:
+      - name: evenodds-db
+        image: postgres:{{ .Values.ddbbDeployment.imageVersion}}
+        ports:
+        - containerPort: 5432
+          name: postgress
+        env:
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "evenodds.fullname" . }}-db-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "evenodds.fullname" . }}-db-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "evenodds.fullname" . }}-db-secret
+                key: POSTGRES_DB
+        volumeMounts:
+        - name: ddbb-init-configmap
+          mountPath: /docker-entrypoint-initdb.d
+        - name: ddbb-dump-configmap
+          mountPath: /tmpdata
+        - name: evenodds-dbdir
+          mountPath: /var/lib/postgresql/data/
+          subPath: pgdata
+      volumes:
+        - name: ddbb-init-configmap
+          configMap:
+            name: {{ include "evenodds.fullname" . }}-ddbb-configmap
+            items:
+            - key: init_db.sql
+              path: init_db.sql
+        - name: ddbb-dump-configmap
+          configMap:
+            name: {{ include "evenodds.fullname" . }}-ddbb-configmap
+            items:
+            - key: postgresql.conf
+              path: postgresql.conf
+  volumeClaimTemplates:
+  - metadata: 
+      name: evenodds-dbdir
+      namespace: {{ .Values.namespace }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.ddbbDeployment.pvGBSize | default 1 }}Gi
