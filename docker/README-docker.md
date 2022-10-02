@@ -133,7 +133,7 @@ Se ejecuta con docker-compose y se construyen dos imágenes.
     {"server_time": "22/Sep/2022 08:00:59", "message": ""POST / HTTP/1.1" 200 3674"}
     {"server_time": "22/Sep/2022 08:01:00", "message": ""GET / HTTP/1.1" 200 3092"}
     {"server_time": "22/Sep/2022 08:01:03", "message": ""POST / HTTP/1.1" 200 3673"}
-```
+    ```
 
 
     
