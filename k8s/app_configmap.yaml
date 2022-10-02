@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evenodds-app-cfgmp
+  namespace: evenodds-ns
+data:
+  # property-like keys; each key maps to a simple value
+  APP_PORT: "9000"
+  MAX_LOGS_SIZE: "20m"
+  MAX_LOGS_FILES: "10"
+  POSTGRES_HOST: db
+  

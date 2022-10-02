@@ -1,0 +1,33 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: eck-deploy
+  namespace: evenodds-ns
+spec:
+  version: 8.4.1
+  count: 1
+  elasticsearchRef:
+    name: eck-deploy
+  http:
+    service:
+      spec:
+        type: LoadBalancer
+  podTemplate:
+    spec:
+      containers:
+      - name: kibana
+        env:
+          - name: NODE_OPTIONS
+            value: "--max-old-space-size=2048"
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 400m
+          limits:
+            memory: 3Gi
+            cpu: 1500m
+
+
+
+# kubectl get secret -n evenodds-ns  eck-deploy-es-elastic-user -o=jsonpath='{.data.elastic}' | base64 --decode; echo 
+# echo https://$(kubectl get services -n evenodds-ns | grep eck-deploy-kb-http | awk '{print $4}'):5601

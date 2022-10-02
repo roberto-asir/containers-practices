@@ -1,0 +1,153 @@
+apiVersion: beat.k8s.elastic.co/v1beta1
+kind: Beat
+metadata:
+  name: eck-filebeat
+  namespace: evenodds-ns
+spec:
+  type: filebeat
+  version: 8.4.2
+  elasticsearchRef:
+    name: eck-deploy
+  kibanaRef:
+    name: eck-deploy
+  config:
+    filebeat:
+      autodiscover:
+        providers:
+        # Para obtener los logs de la aplicación y entender el campo message como objeto json
+        - type: kubernetes
+          templates:
+          - condition:
+              equals:
+                kubernetes.container.image: robertoasir/even-odds:v0.5
+            config:
+              - type: log
+                paths:
+                  - /var/log/evenodds.*
+                json.keys_under_root: true
+        - type: kubernetes
+          templates:
+          - condition:
+              equals:
+                kubernetes.container.image: postgres:15beta4-alpine3.16
+            config:
+              - type: container
+                paths:
+                  - /var/log/containers/*.log
+        - type: kubernetes
+          scope: node
+          node: ${NODE_NAME}
+          hints:
+            enabled: true
+            default_config:
+              type: container
+              paths:
+              - /var/log/containers/*${data.kubernetes.container.id}.log
+    processors:
+      - decode_json_fields:
+          fields: ["message"]
+      - add_cloud_metadata: {}
+      - add_host_metadata: {}
+  daemonSet:
+    podTemplate:
+      spec:
+        # #serviceAccount: filebeat
+        serviceAccountName: filebeat
+        automountServiceAccountToken: true
+        terminationGracePeriodSeconds: 60
+        dnsPolicy: ClusterFirstWithHostNet
+        hostNetwork: true
+        containers:
+        - name: filebeat
+          # Añado recursos porque dió OOMKilled
+          # Last State:     Terminated
+          # Reason:       OOMKilled
+          # Exit Code:    137
+          resources:
+              requests:
+                memory: 1Gi
+                cpu: 200m
+              limits:
+                memory: 2Gi
+                cpu: 600m
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+          - name: varlogcontainers
+            mountPath: /var/log/containers
+          - name: varlogpods
+            mountPath: /var/log/pods
+          - name: varlibdockercontainers
+            mountPath: /var/lib/docker/containers
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+        volumes:
+        - name: varlogcontainers
+          hostPath:
+            path: /var/log/containers
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filebeat
+  namespace: evenodds-ns
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: filebeat
+  namespace: evenodds-ns
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: filebeat
+subjects:
+- kind: ServiceAccount
+  name: filebeat
+  namespace: evenodds-ns
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: filebeat
+  namespace: evenodds-ns
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - namespaces
+  - events
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: filebeat-kubeadm-config
+  namespace: kube-system
+  labels:
+    k8s-app: filebeat
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    resourceNames:
+      - kubeadm-config
+    verbs: ["get"]
+---

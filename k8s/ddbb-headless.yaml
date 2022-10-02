@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: evenodds-headless # tiene que hacer match con el statefulset 'serviceName'
+  labels:
+    app: evenodds-app
+  namespace: evenodds-ns
+spec:
+  ports:
+  - port: 5432
+    name: postgres
+  clusterIP: None # Mana
+  selector:
+    app: evenodds-stateful # apunta a pods

@@ -1,0 +1,87 @@
+apiVersion: apps/v1 # Version de la API (va cambiando)
+kind: Deployment  # TIPO: Deployment
+metadata: # Metadatos del Deployment
+  name: evenodds-deployment
+  namespace: evenodds-ns
+#  namespace: prueba2
+spec: # Specificacion del DEPLOYMENT
+  selector:
+    matchLabels:
+      app: evenodds-app
+  replicas: 2 # indica al controlador que ejecute 2 pods
+  template:
+    metadata: # Metadatos del POD
+      annotations:
+        co.elastic.logs.json-logging/json.keys_under_root: "true"
+        co.elastic.logs.json-logging/json.add_error_key: "true"
+        co.elastic.logs.json-logging/json.message_key: "message"
+      labels:
+        app: evenodds-app
+        svr: app-ddbb
+    spec: # Especificación del POD
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: evenodds-app
+                namespaces:
+                  - "evenodds-ns"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+      containers: # Declaración de los contenedores del POD
+      - name: evenodds-container
+        # args:
+        # - /bin/sh
+        # - -c
+        # - set -x;
+        #   RESP=KO;
+        #   HOST=$POSTGRES_HOST;
+        #   while [[ $RESP != "OK" ]]; do 
+        #     if nc -zv -w 5 $HOST 5432 2>&1 | grep open; then RESP=OK; else echo Timeout connection. Trying again; fi;
+        #   done;
+        #   python manage.py runserver 0.0.0.0:${APP_PORT};
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "150m"
+          limits:
+            memory: "128Mi"
+            cpu: "400m"
+        image: robertoasir/even-odds:v0.5
+        ports:
+        - containerPort: 9000
+        env:
+          - name: APP_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: evenodds-app-cfgmp
+                key: APP_PORT
+          - name: MAX_LOGS_SIZE
+            valueFrom:
+              configMapKeyRef:
+                name: evenodds-app-cfgmp
+                key: MAX_LOGS_SIZE
+          - name: MAX_LOGS_FILES
+            valueFrom:
+              configMapKeyRef:
+                name: evenodds-app-cfgmp
+                key: MAX_LOGS_FILES
+          - name: POSTGRES_HOST
+            value: $(EVENODDS_APP_DDBB_CONNECT_SERVICE_HOST)
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: evenodds-db-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: evenodds-db-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: evenodds-db-secret
+                key: POSTGRES_DB

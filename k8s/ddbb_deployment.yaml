@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: evenodds-sfs
+  namespace: evenodds-ns
+spec:
+  selector:
+    matchLabels:
+      app: evenodds-stateful # tiene que coincidir con .spec.template.metadata.labels
+  serviceName: "evenodds-headless" # Tiene que hacer match con el headless service name
+  replicas: 1 # por defecto es 1
+  template:
+    metadata:
+      labels:
+        app: evenodds-stateful # tiene que coincidir con .spec.selector.matchLabels
+        svr: app-ddbb
+      annotations:
+        co.elastic.metrics/enabled: "true"
+        co.elastic.metrics/module: "postgres"
+        co.elastic.metrics/hosts: '${data.host}:5432'
+        co.elastic.metrics/period: 1m
+        co.elastic.logs/enabled: "true"
+        co.elastic.logs/module: "postgres"
+    spec:
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: evenodds-app
+                namespaces:
+                  - "evenodds-ns"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+      terminationGracePeriodSeconds: 100
+      containers:
+      - name: evenodds-db
+        image: postgres:15beta4-alpine3.16
+        ports:
+        - containerPort: 5432
+          name: postgress
+        env:
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: evenodds-db-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: evenodds-db-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: evenodds-db-secret
+                key: POSTGRES_DB
+        volumeMounts:
+        - name: ddbb-init-configmap
+          mountPath: /docker-entrypoint-initdb.d
+        - name: ddbb-dump-configmap
+          mountPath: /tmpdata
+        - name: evenodds-dbdir
+          mountPath: /var/lib/postgresql/data/
+          subPath: pgdata
+        # - name: ddbb-conf-configmap
+        #   mountPath: /var/lib/postgresql/data/
+      volumes:
+        # - name: ddbb-init-configmap
+        #   configMap:
+        #     name: ddbb-configmap
+        #     items:
+        #     - key: ini_db.sh
+        #       path: init_db.sh
+        - name: ddbb-init-configmap
+          configMap:
+            name: ddbb-configmap
+            items:
+            - key: init_db.sql
+              path: init_db.sql
+        - name: ddbb-dump-configmap
+          configMap:
+            name: ddbb-configmap
+            items:
+            # - key: ini_db.sql
+            #   path: init_db.sql
+            - key: postgresql.conf
+              path: postgresql.conf
+        # - name: ddbb-conf-configmap
+        #   configMap:
+        #     name: ddbb-configmap
+        #     items:
+        #     - key: postgresql.conf
+        #       path: postgresql.conf
+  volumeClaimTemplates:
+  - metadata: 
+      name: evenodds-dbdir
+      namespace: evenodds-ns
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
