@@ -111,8 +111,17 @@ Para ejecutar el repo completamente en un cluster limpio y se debe ejecutar los 
 
     `kubectl apply -f ingress/ingress.yaml`
 
+## Comprobar el despliegue
+Para comprobar el despliegue en caso de que se configure el ingress se puede obtener el enlace de acceso con este comando:
+Se pueden obtener las URLs (con y sin https) con este comando:
+`INGRESS=$(kubectl get ingress -n evenodds-ns | grep evenodds-ingress | awk '{print $3}') && echo http://$INGRESS && echo https://$INGRESS`
+![Captura desde 2022-10-02 12-18-12](https://user-images.githubusercontent.com/2046110/193449195-b87229a5-9472-43f1-9668-ee32ba7c8958.png)
 
+En caso de no usar ingress se puede acceder con este comando:
+Se pueden obtener las URLs (con y sin https) con este comando:
+`LB=$(kubectl get service -n evenodds-ns | grep evenodds-lb | awk '{print $4}') && echo http://$LB`
 
+![Captura desde 2022-10-02 12-18-13](https://user-images.githubusercontent.com/2046110/193449194-85f0f874-cd82-4336-828e-141e3000feca.png)
 
 
 ## Manifiestos
