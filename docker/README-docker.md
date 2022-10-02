@@ -187,21 +187,3 @@ Sin embargo es posible configurar los siguientes valores definidos en el archiov
 | EXPOSED_PORT | 9000 |
 | MAX_LOGS_SIZE | 20m |
 | MAX_LOGS_FILES | 10 |
-
-## Instrucciones para desplegarla en Kubernetes, incluyendo requerimientos, dependencias, tipos de Kubernetes soportados, etc.
-3. Dockerfile que construya el / los contenedores necesarios:
-a. Que compile / dependencias / pruebe la aplicación.
-b. Que la empaquete con los requisitos mínimos (usar Multistage)
-4. Docker compose
-a. Que permita ejecutar la aplicación completa en local, considerando la
-persistencia de datos y comunicaciones entre distintos contenedores.
-5. Logs
-a. Formato JSON a ser posible [OPCIONAL]b. Asegurarse de que todos los componentes (aplicación y base de datos)
-mandan sus logs por la salida estándar y salida de error (STDOUT /
-STDERR).
-6. Configurabilidad
-a. La aplicación debe de poder ser configurable, por ejemplo, host de la base de
-datos, puerto, usuario, contraseña, etc. Mediante fichero de configuración
-y/o variables de entorno.
-b. Trata de dotar de la mayor flexibilidad posible al microservicio y documenta
-todas las opciones de configuración en el README.
