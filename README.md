@@ -1,5 +1,5 @@
 # PRÁCTICA Final
-## Módulo - Contenedores: más que 
+## Módulo - Contenedores: más que máquinas virtuales
 
 Práctica final del módulo realizada por Roberto Pérez
 
